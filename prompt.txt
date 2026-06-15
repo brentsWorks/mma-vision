@@ -1,0 +1,48 @@
+You are a senior AI systems architect and computer vision researcher tasked with designing a state-of-the-art MMA Computer Vision Analysis platform from first principles. This is a deep design 
+and ideation exercise — no timelines, no project management, only rigorous system thinking.
+The Vision
+Design a computer vision system for Mixed Martial Arts (MMA) that does what similar tools do for soccer — player tracking, spatial awareness, a 2D tactical overlay — but reimagined for the 
+unique, chaotic, and semantically rich environment of MMA. The system must work on both live footage (real-time screen overlay) and uploaded/recorded video.
+Your Process
+Do not output a final answer immediately. Instead, work through this iteratively and argumentatively:
+
+Challenge your own assumptions — before committing to any design decision, argue against it. If you propose a model architecture, steelman the alternatives. If you propose a feature, ask 
+whether it actually adds value or just sounds impressive.
+Identify what makes MMA fundamentally different from other sports vision problems (soccer, basketball, etc.) and let those differences drive design decisions rather than copying existing 
+sports AI paradigms.
+Separate mandatory core features from valuable addons — be ruthless about what belongs in the core vs. what is scope creep. A feature is only mandatory if the system is meaningfully incomplete 
+without it.
+Design for real constraints — occlusion, grappling entanglement, camera angle variance, broadcast vs. cage-side footage, single vs. multi-camera setups, variable lighting. These are not edge 
+cases in MMA, they are the norm. Design must account for them explicitly.
+
+What to Design & Ideate On
+Work through each of these domains deeply, iterating and arguing as you go:
+
+Computer Vision Model Design — what to detect, track, and classify. Pose estimation, action recognition, spatial reasoning. What existing model families (YOLO, ViT, etc.) are worth building on 
+vs. training from scratch. What labeled data strategy makes sense given the scarcity of annotated MMA footage.
+Semantic Understanding Layer — going beyond bounding boxes. Clinch detection, takedown attempts, guard positions, striking exchanges, dominant position recognition. How do you turn raw 
+detections into meaningful fight semantics? What ontology of MMA states and transitions needs to be defined?
+2D Spatial Overlay / "Radar" View — what does a top-down 2D representation even mean in MMA given the vertical dimension (standing vs. ground)? How do you project 3D fight geometry into a 
+useful 2D representation? What should this view communicate and to whom?
+Real-Time Pipeline — latency requirements, hardware assumptions, model optimization tradeoffs (quantization, distillation, etc.), overlay rendering. What does a production-grade real-time 
+pipeline look like vs. an offline analysis pipeline?
+Data Strategy — training data acquisition, synthetic data generation, annotation tooling, active learning loops. How do you bootstrap a model when labeled MMA data is scarce?
+Tech Stack — be opinionated and modern. Justify every major choice. Consider the full stack: model training infrastructure, inference runtime, overlay rendering, data storage, API design. 
+Favor approaches aligned with current high-impact AI engineering trends (not hype).
+System Architecture — how do the components connect? What are the clear boundaries between subsystems? Where are the hardest integration points?
+
+Addon Features to Evaluate
+Critically assess the value and feasibility of each of these — accept, reject, or reshape them:
+
+Fighter biometric estimation (reach, height inference from video)
+Strike velocity and force approximation
+Predictive modeling (submission attempt likelihood, fatigue indicators)
+Multi-camera fusion
+Commentary/highlight generation from semantic events
+Coach-facing tactical dashboards
+Integration with existing fight data APIs (UFC stats, etc.)
+
+Output Format
+Structure your final output as a living design document with clearly argued sections. Where you changed your mind during reasoning, say so and explain why. Where genuine uncertainty remains, 
+flag it explicitly rather than papering over it. The goal is a design that is honest about its tradeoffs, not one that sounds maximally impressive.
+Do not compress your thinking. This is meant to be exhaustive.
