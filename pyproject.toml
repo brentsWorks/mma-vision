@@ -1,0 +1,49 @@
+[project]
+name = "mma-vision"
+version = "0.0.1"
+description = "Computer vision analysis for MMA — relational state estimation, not tracking-plus-semantics."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Proprietary" }
+
+# Core deps kept minimal at scaffold stage. Heavy CV/ML backbones (torch, SAM2,
+# pose models) are added per-task as the backlog reaches them, to keep the
+# initial environment installable and fast. See docs/backlog.md.
+dependencies = [
+    "numpy>=1.26",
+    "pyarrow>=16.0",      # fight-graph / probe outputs in Parquet (P0.2, P1.3)
+    "pyyaml>=6.0",        # ontology.yaml / grammar.yaml (P1.1, P1.2)
+    "pydantic>=2.7",      # schema validation for the fight-graph (P1.3)
+]
+
+[project.optional-dependencies]
+# Pulled in as the backlog reaches perception/probe work (P0.2, P5.x).
+cv = [
+    "opencv-python>=4.9",
+    "av>=12.0",          # video decode for ingest
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mma_vision"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

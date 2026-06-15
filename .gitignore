@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Project data — footage, model weights, and derived artifacts are NOT committed.
+# Keep the repo to code + specs. See docs/backlog.md.
+data/
+clips/
+weights/
+*.mp4
+*.mov
+*.avi
+*.parquet
+*.pt
+*.onnx
+
+# Eval/probe outputs are reproducible; commit only the frozen manifests, not blobs.
+runs/
+outputs/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
