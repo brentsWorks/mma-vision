@@ -1,0 +1,189 @@
+# MMA Position Ontology — machine-readable source of truth.
+#
+# Mirrors docs/ontology.md. Consumed by the constrained decoder (P1.4), the
+# annotation tool (P3.x), and the eval harness (P4.x). Labels produced anywhere
+# in the system are tagged with this `version` (labels are ontology-versioned,
+# docs/workstreams.md WS2) so a future ontology change never silently corrupts
+# old labels.
+#
+# Design principles (docs/ontology.md §1):
+#   1. States are relational, dual-indexed (one config -> two per-fighter labels).
+#   2. SCRAMBLE / TRANS are first-class states, not the absence of a state.
+#   3. The grammar (grammar.yaml) is SOFT — costs, not boolean legality.
+#   4. Granularity is tiered — collapse to Tier 1 by merging leaf states.
+
+version: "0.1.0"
+
+# Dominance scale is an approximation (docs/ontology.md §5) — a partial order over
+# top-position advantage, normalized 0..1. Do not oversell as a precise quantity.
+dominance_scale:
+  none: 0.0
+  low: 0.2
+  low_mid: 0.35
+  mid: 0.5
+  mid_high: 0.65
+  high: 0.8
+  highest: 1.0
+
+# ---------------------------------------------------------------------------
+# Tier 0 — Regime. Always emitted; cheapest and most reliable layer.
+# ---------------------------------------------------------------------------
+regimes:
+  - id: R-STAND
+    name: Standing
+    desc: Both fighters on feet, not gripping.
+  - id: R-CLINCH
+    name: Clinch
+    desc: Both standing, sustained grip/contact.
+  - id: R-GROUND
+    name: Ground
+    desc: At least one fighter's torso/hips on the canvas.
+  - id: R-TRANS
+    name: Transitional
+    desc: Takedown / sprawl / stand-up in progress (the regime-level SCRAMBLE).
+
+# ---------------------------------------------------------------------------
+# Tier 1 — Core positions. The mandatory product. Everything below is depth.
+# `dual` gives the per-fighter labels; symmetric states use the same label twice.
+# `regime` links each state up to its Tier-0 regime for collapse/rollup.
+# ---------------------------------------------------------------------------
+states:
+  # --- Standing ---
+  - id: S-OPEN
+    regime: R-STAND
+    name: Open / striking range
+    dual: { a: open, b: open }
+    symmetric: true
+  - id: S-PRESS
+    regime: R-STAND
+    name: One pressuring, other retreating
+    dual: { a: pressing, b: retreating }
+    symmetric: false
+  - id: S-CAGE
+    regime: R-STAND
+    name: One backed against the cage
+    dual: { a: cage-controlling, b: cage-pinned }
+    symmetric: false
+
+  # --- Clinch ---
+  - id: C-NEUTRAL
+    regime: R-CLINCH
+    name: 50/50 collar / over-under
+    dual: { a: clinch-neutral, b: clinch-neutral }
+    symmetric: true
+  - id: C-DOMINANT
+    regime: R-CLINCH
+    name: One has back-clinch / body-lock control
+    dual: { a: clinch-control, b: clinch-defending }
+    symmetric: false
+  - id: C-CAGE
+    regime: R-CLINCH
+    name: Clinch pressed on the cage
+    dual: { a: cage-pressing, b: cage-pinned }
+    symmetric: false
+
+  # --- Ground (dual-indexed top/bottom; dominance is the TOP fighter's) ---
+  - id: G-GUARD
+    regime: R-GROUND
+    name: Guard
+    dual: { a: in-guard, b: full-guard }
+    symmetric: false
+    dominance: low
+  - id: G-HALF
+    regime: R-GROUND
+    name: Half guard
+    dual: { a: half-guard-top, b: half-guard-bottom }
+    symmetric: false
+    dominance: low_mid
+  - id: G-SIDE
+    regime: R-GROUND
+    name: Side control
+    dual: { a: side-control-top, b: side-control-bottom }
+    symmetric: false
+    dominance: mid_high
+  - id: G-NS
+    regime: R-GROUND
+    name: North-south
+    dual: { a: north-south-top, b: north-south-bottom }
+    symmetric: false
+    dominance: mid_high
+  - id: G-MOUNT
+    regime: R-GROUND
+    name: Mount
+    dual: { a: mount-top, b: mounted }
+    symmetric: false
+    dominance: high
+  - id: G-BACK
+    regime: R-GROUND
+    name: Back control
+    dual: { a: back-control, b: back-taken }
+    symmetric: false
+    dominance: highest
+  - id: G-TURTLE
+    regime: R-GROUND
+    name: Turtle
+    dual: { a: turtle-top, b: turtle }
+    symmetric: false
+    dominance: mid
+
+  # --- Universal ---
+  - id: X-SCRAMBLE
+    regime: R-TRANS
+    name: Scramble / position in flux
+    dual: { a: scramble, b: scramble }
+    symmetric: true
+  - id: X-SEPARATED
+    regime: R-TRANS
+    name: Separated, standup imminent
+    dual: { a: separated, b: separated }
+    symmetric: true
+
+# ---------------------------------------------------------------------------
+# Tier 2 — Sub-positions (addon depth). Each maps up to a Tier-1 `parent` so a
+# Tier-1-only model can be trained by collapsing these. Not yet load-bearing.
+# ---------------------------------------------------------------------------
+sub_positions:
+  - { id: G-GUARD-CLOSED, parent: G-GUARD, name: Closed guard }
+  - { id: G-GUARD-OPEN, parent: G-GUARD, name: Open guard }
+  - { id: G-GUARD-BUTTERFLY, parent: G-GUARD, name: Butterfly guard }
+  - { id: G-GUARD-DLR, parent: G-GUARD, name: De la Riva }
+  - { id: G-BACK-BOTH-HOOKS, parent: G-BACK, name: Back, both hooks }
+  - { id: G-BACK-ONE-HOOK, parent: G-BACK, name: Back, one hook }
+  - { id: G-BACK-BODY-TRIANGLE, parent: G-BACK, name: Back, body triangle }
+  - { id: G-BACK-CRUCIFIX, parent: G-BACK, name: Crucifix }
+  - { id: C-DOM-REAR-BODYLOCK, parent: C-DOMINANT, name: Rear body lock }
+  - { id: C-DOM-DOUBLE-UNDER, parent: C-DOMINANT, name: Double unders }
+
+# ---------------------------------------------------------------------------
+# Tier 3 — Action/event overlay. These RIDE ON the state stream; they are not
+# states. Most are DERIVED from transitions (docs/ontology.md §4, P1.5), so this
+# list is the vocabulary the derivation emits, not a set of independent detectors.
+# `params` documents the qualifier each event carries.
+# ---------------------------------------------------------------------------
+events:
+  - { id: TAKEDOWN_ATTEMPT, params: [] }
+  - { id: TAKEDOWN_LAND, params: [] }
+  - { id: SWEEP, params: [] }
+  - { id: REVERSAL, params: [] }
+  - { id: GUARD_PASS, params: [] }
+  - { id: SUBMISSION_ATTEMPT, params: [type] }
+  - { id: SUBMISSION_DEFEND, params: [] }
+  - { id: STRIKE_ATTEMPT, params: [zone] }
+  - { id: STRIKE_LAND, params: [zone] }
+  - { id: KNOCKDOWN, params: [] }
+  - { id: STANDUP, params: [cause] } # cause: ref | voluntary
+
+# ---------------------------------------------------------------------------
+# Known gaps (docs/ontology.md §5) — recorded in-spec so they are not forgotten.
+# Deliberately NOT in Tier 1; flagged as real incompleteness.
+# ---------------------------------------------------------------------------
+known_gaps:
+  - id: G-NEUTRAL-GROUND
+    note: >
+      True neutral-ground / leg-entanglement (50/50, ashi-garami, double-guard-pull)
+      where NEITHER fighter is on top. Currently shoehorned into X-SCRAMBLE / G-GUARD,
+      which is wrong. Needs its own branch before serious leg-lock analysis.
+  - id: dominance-control-quality
+    note: >
+      Dominance-as-scalar ignores control quality (locked side control vs. one with an
+      escape in progress). A Tier-1 approximation only.
