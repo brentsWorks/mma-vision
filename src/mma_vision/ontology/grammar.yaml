@@ -1,0 +1,69 @@
+# MMA Transition Grammar — machine-readable source of truth.
+#
+# Mirrors docs/ontology.md §3. The grammar is SOFT (docs/ontology.md §1.3): transitions
+# have *cost*, not boolean legality. The constrained decoder (P1.4) consumes this as the
+# transition-penalty term in:
+#     arg max  Σ [ log P(state|frame) − λ · transition_cost ]
+# so every "code" below is just a relative cost; λ scales the whole grammar against the
+# per-frame evidence (docs/ontology.md §4).
+#
+# Why costs and not hard rules: real fights teleport in violent scrambles. An
+# illegal-looking jump must be *expensive*, never *impossible*, or the decoder cannot
+# recover from a genuinely fast transition (or from dropped frames).
+#
+# Tagged with the same ontology `version` as ontology.yaml so a grammar/ontology mismatch
+# is caught at load time (labels are ontology-versioned, docs/workstreams.md WS2).
+
+version: "0.1.0"
+
+# ---------------------------------------------------------------------------
+# Cost codes (docs/ontology.md §3 legend). The numeric values are the relative
+# penalties the decoder applies; only their ORDER and the SCRAMBLE escape hatch
+# are load-bearing. `forbidden_via_scramble` is NOT infinity — it is merely a
+# large finite cost, because the path of last resort is always reachable through
+# X-SCRAMBLE (the pressure-release valve), and we never want -inf in a Viterbi
+# lattice (it would make a dropped-frame run undecodable).
+#   self     `=`  staying put — free.
+#   direct   `D`  cheap, expected mat movement.
+#   rare     `R`  happens, but penalized; the decoder needs strong evidence.
+#   forbidden_via_scramble `—`  only reachable by routing through X-SCRAMBLE;
+#                               a direct jump here pays the heaviest cost.
+costs:
+  self: 0.0
+  direct: 1.0
+  rare: 4.0
+  forbidden_via_scramble: 12.0
+
+# ---------------------------------------------------------------------------
+# Ground transition cost matrix (docs/ontology.md §3, top-fighter perspective).
+# Rows = from-state, columns = to-state. Columns are the same ordered set of
+# ground + universal states. Cells use the cost codes above.
+#
+# Design choices baked in (docs/ontology.md §3):
+#   - MOUNT→GUARD is forbidden_via_scramble: a sweep is *definitionally* a scramble,
+#     so forcing it through X-SCRAMBLE catches a huge class of perception flicker.
+#   - X-SCRAMBLE is direct from/to everything — the low-cost release valve.
+#   - GUARD→MOUNT forbidden but GUARD→BACK merely rare (real grappling asymmetry).
+#   - TURTLE connects cheaply to everything (the great branching point).
+ground_matrix:
+  #            GUARD      HALF       SIDE       NS         MOUNT      BACK       TURTLE     SCRAMBLE   SEP
+  G-GUARD:   { G-GUARD: self,   G-HALF: direct, G-SIDE: rare,   G-NS: rare,   G-MOUNT: forbidden_via_scramble, G-BACK: rare,   G-TURTLE: direct, X-SCRAMBLE: direct, X-SEPARATED: direct }
+  G-HALF:    { G-GUARD: direct, G-HALF: self,   G-SIDE: direct, G-NS: rare,   G-MOUNT: rare,                   G-BACK: rare,   G-TURTLE: direct, X-SCRAMBLE: direct, X-SEPARATED: rare }
+  G-SIDE:    { G-GUARD: rare,   G-HALF: direct, G-SIDE: self,   G-NS: direct, G-MOUNT: direct,                 G-BACK: rare,   G-TURTLE: direct, X-SCRAMBLE: direct, X-SEPARATED: rare }
+  G-NS:      { G-GUARD: rare,   G-HALF: rare,   G-SIDE: direct, G-NS: self,   G-MOUNT: rare,                   G-BACK: direct, G-TURTLE: direct, X-SCRAMBLE: direct, X-SEPARATED: rare }
+  G-MOUNT:   { G-GUARD: forbidden_via_scramble, G-HALF: direct, G-SIDE: direct, G-NS: rare, G-MOUNT: self,     G-BACK: direct, G-TURTLE: rare,   X-SCRAMBLE: direct, X-SEPARATED: rare }
+  G-BACK:    { G-GUARD: forbidden_via_scramble, G-HALF: rare,   G-SIDE: rare,   G-NS: direct, G-MOUNT: direct, G-BACK: self,   G-TURTLE: direct, X-SCRAMBLE: direct, X-SEPARATED: rare }
+  G-TURTLE:  { G-GUARD: direct, G-HALF: direct, G-SIDE: direct, G-NS: direct, G-MOUNT: rare,                   G-BACK: direct, G-TURTLE: self,   X-SCRAMBLE: direct, X-SEPARATED: direct }
+  X-SCRAMBLE: { G-GUARD: direct, G-HALF: direct, G-SIDE: direct, G-NS: direct, G-MOUNT: direct,                G-BACK: direct, G-TURTLE: direct, X-SCRAMBLE: self,   X-SEPARATED: direct }
+
+# ---------------------------------------------------------------------------
+# Regime-level grammar (docs/ontology.md §3). STAND↔GROUND is forbidden_via_scramble:
+# there is ALWAYS a takedown / pull / stand-up (R-TRANS) between standing and ground,
+# so a direct STAND→GROUND jump is a dropped-frame artifact and must route through
+# R-TRANS. R-TRANS (the regime-level SCRAMBLE) is reachable cheaply from everything.
+# Symmetric in code by construction; listed both directions for explicitness.
+regime_matrix:
+  R-STAND:   { R-STAND: self,   R-CLINCH: direct, R-GROUND: forbidden_via_scramble, R-TRANS: direct }
+  R-CLINCH:  { R-STAND: direct, R-CLINCH: self,   R-GROUND: direct,                 R-TRANS: direct }
+  R-GROUND:  { R-STAND: forbidden_via_scramble, R-CLINCH: direct, R-GROUND: self,   R-TRANS: direct }
+  R-TRANS:   { R-STAND: direct, R-CLINCH: direct, R-GROUND: direct,                 R-TRANS: self }
