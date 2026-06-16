@@ -25,6 +25,9 @@ weights/
 runs/
 outputs/
 
+# Local-only working notes (not part of the shared repo).
+CLAUDE.md
+
 # OS / editor
 .DS_Store
 .idea/
